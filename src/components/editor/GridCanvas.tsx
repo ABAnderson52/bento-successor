@@ -22,9 +22,17 @@ import { deleteWidget, updateWidgetOrder, deleteStorageFile } from '@/app/(auth)
 
 interface GridCanvasProps {
   initialWidgets: Widget[]
+  isEditing: boolean
+  selectedWidgetId: string | null
+  onWidgetSelect: (id: string | null) => void
 }
 
-export function GridCanvas({ initialWidgets }: GridCanvasProps) {
+export function GridCanvas({ 
+  initialWidgets, 
+  isEditing, 
+  selectedWidgetId, 
+  onWidgetSelect 
+}: GridCanvasProps) {
   const [widgets, setWidgets] = useState(initialWidgets)
 
   useEffect(() => {
@@ -43,6 +51,8 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
   )
 
   const handleDragEnd = async (event: DragEndEvent) => {
+    if (!isEditing) return
+
     const { active, over } = event
 
     if (over && active.id !== over.id) {
@@ -92,7 +102,8 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
       collisionDetection={closestCenter}
       onDragEnd={handleDragEnd}
     >
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-7xl mx-auto">
+      
+      <div className="relative z-0 grid grid-cols-2 md:grid-cols-4 gap-4 w-full max-w-7xl mx-auto">
         <SortableContext 
           items={widgets.map(w => w.id)} 
           strategy={rectSortingStrategy}
@@ -102,6 +113,9 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
               key={widget.id} 
               widget={widget} 
               onDelete={() => handleDelete(widget.id)}
+              isEditing={isEditing}
+              isSelected={selectedWidgetId === widget.id}
+              onSelect={() => onWidgetSelect(widget.id)}
             />
           ))}
         </SortableContext>

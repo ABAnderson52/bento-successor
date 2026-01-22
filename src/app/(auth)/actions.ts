@@ -124,18 +124,12 @@ export async function updateWidgetOrder(widgets: { id: string, created_at: strin
   revalidatePath('/editor')
 }
 
-/**
- * Interface to avoid 'any' warning
- */
 interface WidgetUpdatePayload {
   content: Record<string, unknown>;
   w?: number;
   h?: number;
 }
 
-/**
- * Updated to handle both content and optional dimensions (w/h)
- */
 export async function updateWidgetContent(
   id: string, 
   content: Record<string, unknown>,
@@ -176,8 +170,7 @@ export async function uploadWidgetImage(formData: FormData) {
   const file = formData.get('file') as File
   if (!file) throw new Error('No file provided')
 
-  // --- SAFETY CHECKS ---
-  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const MAX_SIZE = 5 * 1024 * 1024;
   const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
 
   if (file.size > MAX_SIZE) {
@@ -187,7 +180,6 @@ export async function uploadWidgetImage(formData: FormData) {
   if (!ALLOWED_TYPES.includes(file.type)) {
     throw new Error('Only JPEG, PNG, WebP, and GIF are allowed')
   }
-  // ---------------------
 
   const fileExt = file.name.split('.').pop()
   const fileName = `${user.id}/${uuidv4()}.${fileExt}`
@@ -222,5 +214,14 @@ export async function deleteStorageFile(publicUrl: string) {
 
   if (error) {
     console.error('Cleanup error:', error.message)
+  }
+}
+
+export async function getFavicon(url: string) {
+  try {
+    const domain = new URL(url).hostname;
+    return `https://www.google.com/s2/favicons?domain=${domain}&sz=128`;
+  } catch {
+    return null;
   }
 }

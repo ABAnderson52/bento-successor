@@ -2,9 +2,8 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { signOut, addWidget } from '../(auth)/actions'
 import { LogOut, ShieldCheck, User, Plus } from 'lucide-react'
-import { GridCanvas } from '@/components/editor/GridCanvas'
-import { WidgetDock } from '@/components/editor/WidgetDock'
 import { Widget } from '@/types'
+import { ClientEditorWrapper } from '@/components/editor/ClientEditorWrapper'
 
 export const dynamic = 'force-dynamic'
 
@@ -14,7 +13,6 @@ export default async function EditorPage() {
   const { data: { user }, error: authError } = await supabase.auth.getUser()
   if (authError || !user) redirect('/login')
 
-  // Back to efficient parallel fetching
   const [profileResponse, widgetsResponse] = await Promise.all([
     supabase.from('profiles').select('*').eq('id', user.id).single(),
     supabase.from('widgets').select('*').eq('user_id', user.id).order('created_at', { ascending: true })
@@ -26,7 +24,7 @@ export default async function EditorPage() {
 
   return (
     <div className="min-h-screen bg-[#fafafa] dark:bg-[#050505] text-zinc-900 dark:text-zinc-100 pb-24">
-      <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-black/50 backdrop-blur-md sticky top-0 z-50">
+      <nav className="border-b border-zinc-200 dark:border-zinc-800 bg-white/50 dark:bg-black/50 backdrop-blur-md sticky top-0 z-30">
         <div className="max-w-7xl mx-auto px-4 h-16 flex items-center justify-between">
           <div className="flex items-center gap-4">
             <span className="font-bold tracking-tighter text-xl uppercase">Editor</span>
@@ -52,11 +50,11 @@ export default async function EditorPage() {
         </div>
       </nav>
 
-      <main className="max-w-7xl mx-auto p-6 lg:p-12">
+      <main className="max-w-7xl mx-auto p-6 lg:p-12 relative z-0">
         {isEmpty ? (
           <div className="flex flex-col items-center justify-center py-32 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-[3rem] bg-zinc-50/50 dark:bg-zinc-900/20">
             <div className="h-16 w-16 bg-zinc-200 dark:bg-zinc-800 rounded-2xl mb-6 flex items-center justify-center text-zinc-400">
-               <Plus size={32} />
+                <Plus size={32} />
             </div>
             <h2 className="text-xl font-medium mb-2">Your grid is empty</h2>
             <p className="text-zinc-500 text-center max-w-xs">
@@ -64,17 +62,9 @@ export default async function EditorPage() {
             </p>
           </div>
         ) : (
-          <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-700">
-             <div>
-                <h1 className="text-3xl font-bold tracking-tight">My Canvas</h1>
-                <p className="text-zinc-500">Drag and drop to rearrange your profile.</p>
-             </div>
-             <GridCanvas initialWidgets={widgets} />
-          </div>
+          <ClientEditorWrapper initialWidgets={widgets} onAdd={addWidget} />
         )}
       </main>
-
-      <WidgetDock onAdd={addWidget} />
     </div>
   )
 }
