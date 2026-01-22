@@ -4,6 +4,7 @@ import { createClient } from '@/lib/supabase/server'
 import { redirect } from 'next/navigation'
 import { revalidatePath } from 'next/cache'
 import { WidgetType } from '@/types'
+import { v4 as uuidv4 } from 'uuid'
 
 export async function login(formData: FormData) {
   const supabase = await createClient()
@@ -50,10 +51,7 @@ export async function addWidget(type: WidgetType) {
     link: { w: 1, h: 1 },
     image: { w: 2, h: 2 },
     text: { w: 2, h: 1 },
-    map: {
-      w: 0,
-      h: 0
-    }
+    map: { w: 2, h: 2 }
   }
 
   const { w, h } = dimensions[type]
@@ -126,15 +124,38 @@ export async function updateWidgetOrder(widgets: { id: string, created_at: strin
   revalidatePath('/editor')
 }
 
-export async function updateWidgetContent(id: string, content: Record<string, unknown>) {
+/**
+ * Interface to avoid 'any' warning
+ */
+interface WidgetUpdatePayload {
+  content: Record<string, unknown>;
+  w?: number;
+  h?: number;
+}
+
+/**
+ * Updated to handle both content and optional dimensions (w/h)
+ */
+export async function updateWidgetContent(
+  id: string, 
+  content: Record<string, unknown>,
+  dimensions?: { w: number; h: number }
+) {
   const supabase = await createClient()
   
   const { data: { user } } = await supabase.auth.getUser()
   if (!user) throw new Error('Unauthorized')
 
+  const updateData: WidgetUpdatePayload = { content }
+  
+  if (dimensions) {
+    updateData.w = dimensions.w
+    updateData.h = dimensions.h
+  }
+
   const { error } = await supabase
     .from('widgets')
-    .update({ content })
+    .update(updateData)
     .eq('id', id)
     .eq('user_id', user.id)
 
@@ -144,4 +165,62 @@ export async function updateWidgetContent(id: string, content: Record<string, un
   }
 
   revalidatePath('/editor')
+}
+
+export async function uploadWidgetImage(formData: FormData) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const file = formData.get('file') as File
+  if (!file) throw new Error('No file provided')
+
+  // --- SAFETY CHECKS ---
+  const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+  const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/webp', 'image/gif'];
+
+  if (file.size > MAX_SIZE) {
+    throw new Error('File size must be less than 5MB')
+  }
+
+  if (!ALLOWED_TYPES.includes(file.type)) {
+    throw new Error('Only JPEG, PNG, WebP, and GIF are allowed')
+  }
+  // ---------------------
+
+  const fileExt = file.name.split('.').pop()
+  const fileName = `${user.id}/${uuidv4()}.${fileExt}`
+
+  const { data, error } = await supabase.storage
+    .from('widget-assets')
+    .upload(fileName, file)
+
+  if (error) {
+    console.error('Upload error:', error.message)
+    throw new Error('Failed to upload image')
+  }
+
+  const { data: { publicUrl } } = supabase.storage
+    .from('widget-assets')
+    .getPublicUrl(data.path)
+
+  return publicUrl
+}
+
+export async function deleteStorageFile(publicUrl: string) {
+  const supabase = await createClient()
+
+  const pathParts = publicUrl.split('/widget-assets/')
+  if (pathParts.length < 2) return
+
+  const filePath = pathParts[1]
+
+  const { error } = await supabase.storage
+    .from('widget-assets')
+    .remove([filePath])
+
+  if (error) {
+    console.error('Cleanup error:', error.message)
+  }
 }

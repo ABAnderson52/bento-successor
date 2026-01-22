@@ -18,7 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Widget } from '@/types'
 import { SortableWidget } from './SortableWidget'
-import { deleteWidget, updateWidgetOrder } from '@/app/(auth)/actions'
+import { deleteWidget, updateWidgetOrder, deleteStorageFile } from '@/app/(auth)/actions'
 
 interface GridCanvasProps {
   initialWidgets: Widget[]
@@ -59,19 +59,27 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
         created_at: new Date(now.getTime() + index * 1000).toISOString()
       }))
 
-try {
-      await updateWidgetOrder(updatedWidgets)
-    } catch (err) {
-      console.error("Order update failed:", err)
-      setWidgets(initialWidgets)
-    }}
+      try {
+        await updateWidgetOrder(updatedWidgets)
+      } catch (err) {
+        console.error("Order update failed:", err)
+        setWidgets(initialWidgets)
+      }
+    }
   }
 
-const handleDelete = async (id: string) => {
+  const handleDelete = async (id: string) => {
     try {
+      const widgetToDelete = widgets.find(w => w.id === id)
+
       setWidgets((current) => current.filter(w => w.id !== id))
+
+      if (widgetToDelete?.content?.imageUrl) {
+        await deleteStorageFile(widgetToDelete.content.imageUrl)
+      }
+
       await deleteWidget(id)
-    } catch (err) { // Changed 'error' to 'err' and utilized it below
+    } catch (err) {
       console.error("Delete failed:", err)
       setWidgets(initialWidgets)
       alert("Failed to delete widget")
