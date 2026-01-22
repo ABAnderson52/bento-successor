@@ -1,5 +1,16 @@
 export type WidgetType = 'profile' | 'social' | 'map' | 'text' | 'image' | 'link';
 
+export type SocialPlatform = 'instagram' | 'twitter' | 'tiktok' | 'youtube' | 'linkedin' | 'github' | 'none';
+
+export interface WidgetContent {
+  title?: string;
+  description?: string;
+  url?: string;
+  platform?: SocialPlatform;
+  imageUrl?: string;
+  objectPosition?: string;
+}
+
 export interface Widget {
   id: string;
   user_id: string;
@@ -8,7 +19,7 @@ export interface Widget {
   y: number;
   w: number;
   h: number;
-  content: any;
+  content: WidgetContent;
   created_at: string;
 }
 

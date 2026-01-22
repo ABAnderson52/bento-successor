@@ -2,9 +2,10 @@
 
 import React, { useState, useRef } from 'react'
 import Image from 'next/image'
-import { Widget } from '@/types'
-import { X, Save, Loader2, Upload, ImageIcon, Maximize2 } from 'lucide-react'
+import { Widget, WidgetContent, SocialPlatform } from '@/types'
+import { X, Save, Loader2, Upload } from 'lucide-react'
 import { updateWidgetContent, uploadWidgetImage, deleteStorageFile } from '@/app/(auth)/actions'
+import { SOCIAL_PLATFORMS } from '@/lib/constants'
 
 interface WidgetDrawerProps {
   widget: Widget
@@ -15,7 +16,7 @@ interface WidgetDrawerProps {
 export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
   const [loading, setLoading] = useState(false)
   const [uploading, setUploading] = useState(false)
-  const [content, setContent] = useState(widget.content)
+  const [content, setContent] = useState<WidgetContent>(widget.content)
   const [dimensions, setDimensions] = useState({ w: widget.w, h: widget.h })
   const fileInputRef = useRef<HTMLInputElement>(null)
 
@@ -42,8 +43,6 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
   const handleSave = async () => {
     setLoading(true)
     try {
-      // In V1, we'll extend updateWidgetContent to also accept dimensions
-      // If your action only takes content, we'll need to update that action too.
       await updateWidgetContent(widget.id, content, dimensions)
       onClose()
     } catch (err) {
@@ -60,7 +59,9 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
       <div className="relative w-full max-w-md h-full bg-white dark:bg-zinc-950 border-l border-zinc-200 dark:border-zinc-800 shadow-2xl p-8 flex flex-col animate-in slide-in-from-right duration-300">
         <div className="flex items-center justify-between mb-8">
           <h2 className="text-2xl font-bold">Edit Widget</h2>
-          <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full"><X size={20} /></button>
+          <button onClick={onClose} className="p-2 hover:bg-zinc-100 dark:hover:bg-zinc-900 rounded-full">
+            <X size={20} />
+          </button>
         </div>
 
         <div className="flex-1 space-y-8 overflow-y-auto pr-2">
@@ -89,7 +90,37 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
             </div>
           </div>
 
-          {/* 2. IMAGE FOCUS (Only for Image type) */}
+          {/* 2. PLATFORM SELECTOR (Only for Social type) */}
+          {widget.type === 'social' && (
+            <div className="space-y-3">
+              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Platform</label>
+              <div className="grid grid-cols-2 gap-2">
+                {Object.entries(SOCIAL_PLATFORMS).map(([key, platform]) => {
+                  const Icon = platform.icon;
+                  return (
+                    <button
+                      key={key}
+                      onClick={() => setContent({ 
+                        ...content, 
+                        platform: key as SocialPlatform,
+                        title: content.title || platform.name 
+                      })}
+                      className={`flex items-center gap-3 p-3 rounded-xl border-2 transition-all ${
+                        content.platform === key 
+                          ? 'border-zinc-900 dark:border-zinc-100 bg-zinc-900 dark:bg-zinc-100 text-white dark:text-zinc-900' 
+                          : 'border-zinc-100 dark:border-zinc-900 hover:border-zinc-200'
+                      }`}
+                    >
+                      <Icon size={18} />
+                      <span className="text-xs font-bold">{platform.name}</span>
+                    </button>
+                  )
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* 3. IMAGE FOCUS (Only for Image type) */}
           {widget.type === 'image' && content.imageUrl && (
             <div className="space-y-3">
               <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Image Focus</label>
@@ -99,7 +130,9 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
                     key={pos}
                     onClick={() => setContent({ ...content, objectPosition: pos })}
                     className={`flex-1 py-2 rounded-lg border capitalize text-sm ${
-                      content.objectPosition === pos ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-400' : 'border-transparent bg-zinc-50 dark:bg-zinc-900'
+                      content.objectPosition === pos 
+                        ? 'bg-zinc-100 dark:bg-zinc-800 border-zinc-400' 
+                        : 'border-transparent bg-zinc-50 dark:bg-zinc-900'
                     }`}
                   >
                     {pos}
@@ -109,7 +142,7 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
             </div>
           )}
 
-          {/* Existing Image Upload Section */}
+          {/* Image Upload Section */}
           {widget.type === 'image' && (
              <div className="space-y-2">
                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Widget Image</label>
@@ -118,7 +151,12 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
                  className="relative group aspect-video rounded-2xl border-2 border-dashed border-zinc-200 dark:border-zinc-800 flex items-center justify-center cursor-pointer overflow-hidden bg-zinc-50 dark:bg-zinc-900/50"
                >
                  {content.imageUrl ? (
-                   <Image src={content.imageUrl} alt="Preview" fill className={`object-cover object-${content.objectPosition || 'center'}`} />
+                   <Image 
+                     src={content.imageUrl} 
+                     alt="Preview" 
+                     fill 
+                     className={`object-cover object-${content.objectPosition || 'center'}`} 
+                   />
                  ) : (
                    <div className="flex flex-col items-center text-zinc-400">
                      {uploading ? <Loader2 className="animate-spin" /> : <Upload />}
@@ -126,19 +164,41 @@ export function WidgetDrawer({ widget, isOpen, onClose }: WidgetDrawerProps) {
                    </div>
                  )}
                </div>
-               <input type="file" ref={fileInputRef} className="hidden" accept="image/*" onChange={handleFileChange} />
+               <input 
+                 type="file" 
+                 ref={fileInputRef} 
+                 className="hidden" 
+                 accept="image/*" 
+                 onChange={handleFileChange} 
+               />
              </div>
           )}
 
-          {/* Common Fields: Title etc */}
-          <div className="space-y-2">
-            <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Title</label>
-            <input 
-              type="text"
-              value={content.title || ''}
-              onChange={(e) => setContent({ ...content, title: e.target.value })}
-              className="w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border-none focus:ring-2 focus:ring-zinc-500 outline-none transition-all"
-            />
+          {/* Common Fields: Title and URL */}
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">Title</label>
+              <input 
+                type="text"
+                placeholder="Title"
+                value={content.title || ''}
+                onChange={(e) => setContent({ ...content, title: e.target.value })}
+                className="w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border-none focus:ring-2 focus:ring-zinc-500 outline-none transition-all"
+              />
+            </div>
+
+            {(widget.type === 'link' || widget.type === 'social') && (
+              <div className="space-y-2">
+                <label className="text-xs font-bold text-zinc-400 uppercase tracking-widest">URL</label>
+                <input 
+                  type="text"
+                  placeholder="https://..."
+                  value={content.url || ''}
+                  onChange={(e) => setContent({ ...content, url: e.target.value })}
+                  className="w-full p-4 rounded-2xl bg-zinc-100 dark:bg-zinc-900 border-none focus:ring-2 focus:ring-zinc-500 outline-none transition-all"
+                />
+              </div>
+            )}
           </div>
         </div>
 
