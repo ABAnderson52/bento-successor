@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState } from 'react'
+import React, { useState, useEffect } from 'react'
 import {
   DndContext, 
   closestCenter,
@@ -18,6 +18,7 @@ import {
 } from '@dnd-kit/sortable'
 import { Widget } from '@/types'
 import { SortableWidget } from './SortableWidget'
+import { deleteWidget, updateWidgetOrder } from '@/app/(auth)/actions'
 
 interface GridCanvasProps {
   initialWidgets: Widget[]
@@ -26,10 +27,14 @@ interface GridCanvasProps {
 export function GridCanvas({ initialWidgets }: GridCanvasProps) {
   const [widgets, setWidgets] = useState(initialWidgets)
 
+  useEffect(() => {
+    setWidgets(initialWidgets)
+  }, [initialWidgets])
+
   const sensors = useSensors(
     useSensor(PointerSensor, {
       activationConstraint: {
-        distance: 8, // Stops accidental drags when clicking buttons
+        distance: 8,
       },
     }),
     useSensor(KeyboardSensor, {
@@ -37,19 +42,39 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
     })
   )
 
-  const handleDragEnd = (event: DragEndEvent) => {
+  const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event
 
     if (over && active.id !== over.id) {
-      setWidgets((items) => {
-        const oldIndex = items.findIndex((i) => i.id === active.id)
-        const newIndex = items.findIndex((i) => i.id === over.id)
-        
-        const newOrder = arrayMove(items, oldIndex, newIndex)
-        
-        // TODO: Save this new order to Supabase!
-        return newOrder
-      })
+      const oldIndex = widgets.findIndex((i) => i.id === active.id)
+      const newIndex = widgets.findIndex((i) => i.id === over.id)
+      
+      const newOrder = arrayMove(widgets, oldIndex, newIndex)
+
+      setWidgets(newOrder)
+
+      const now = new Date()
+      const updatedWidgets = newOrder.map((widget, index) => ({
+        id: widget.id,
+        created_at: new Date(now.getTime() + index * 1000).toISOString()
+      }))
+
+try {
+      await updateWidgetOrder(updatedWidgets)
+    } catch (err) {
+      console.error("Order update failed:", err)
+      setWidgets(initialWidgets)
+    }}
+  }
+
+const handleDelete = async (id: string) => {
+    try {
+      setWidgets((current) => current.filter(w => w.id !== id))
+      await deleteWidget(id)
+    } catch (err) { // Changed 'error' to 'err' and utilized it below
+      console.error("Delete failed:", err)
+      setWidgets(initialWidgets)
+      alert("Failed to delete widget")
     }
   }
 
@@ -65,7 +90,11 @@ export function GridCanvas({ initialWidgets }: GridCanvasProps) {
           strategy={rectSortingStrategy}
         >
           {widgets.map((widget) => (
-            <SortableWidget key={widget.id} widget={widget} />
+            <SortableWidget 
+              key={widget.id} 
+              widget={widget} 
+              onDelete={() => handleDelete(widget.id)}
+            />
           ))}
         </SortableContext>
       </div>

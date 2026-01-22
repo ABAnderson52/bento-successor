@@ -1,7 +1,7 @@
 'use client'
 
 import React from 'react'
-import { Plus, User, Share2, Link2, Image as ImageIcon, Type } from 'lucide-react'
+import { Plus, User, Share2, Link2, Image as ImageIcon, Type, LucideIcon } from 'lucide-react'
 import { WidgetType } from '@/types'
 
 interface WidgetDockProps {
@@ -9,7 +9,7 @@ interface WidgetDockProps {
 }
 
 export function WidgetDock({ onAdd }: WidgetDockProps) {
-  const widgetOptions: { type: WidgetType; icon: any; label: string }[] = [
+  const widgetOptions: { type: WidgetType; icon: LucideIcon; label: string }[] = [
     { type: 'profile', icon: User, label: 'Profile' },
     { type: 'social', icon: Share2, label: 'Social' },
     { type: 'link', icon: Link2, label: 'Link' },
@@ -18,7 +18,7 @@ export function WidgetDock({ onAdd }: WidgetDockProps) {
   ]
 
   return (
-    <div className="fixed inset-x-0 bottom-10 z-[9999] flex justify-center pointer-events-none">
+    <div className="fixed inset-x-0 bottom-10 z-9999 flex justify-center pointer-events-none">
       <div className="flex items-center gap-2 p-2 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl shadow-2xl pointer-events-auto backdrop-blur-xl">
         {widgetOptions.map((opt) => (
           <button
@@ -43,7 +43,7 @@ export function WidgetDock({ onAdd }: WidgetDockProps) {
           </button>
         ))}
         
-        <div className="w-[1px] h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
+        <div className="w-px h-6 bg-zinc-200 dark:bg-zinc-800 mx-1" />
         
         <button className="h-12 w-12 flex items-center justify-center rounded-2xl bg-black dark:bg-white text-white dark:text-black">
           <Plus size={20} />

@@ -50,6 +50,10 @@ export async function addWidget(type: WidgetType) {
     link: { w: 1, h: 1 },
     image: { w: 2, h: 2 },
     text: { w: 2, h: 1 },
+    map: {
+      w: 0,
+      h: 0
+    }
   }
 
   const { w, h } = dimensions[type]
@@ -72,6 +76,71 @@ export async function addWidget(type: WidgetType) {
   if (error) {
     console.error("Failed to add widget:", error.message)
     throw new Error("Could not create widget")
+  }
+
+  revalidatePath('/editor')
+}
+
+export async function deleteWidget(id: string) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('widgets')
+    .delete()
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Delete error:', error.message)
+    throw new Error('Failed to delete widget')
+  }
+
+  revalidatePath('/editor')
+}
+
+export async function updateWidgetOrder(widgets: { id: string, created_at: string }[]) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const updates = widgets.map((w) => 
+    supabase
+      .from('widgets')
+      .update({ created_at: w.created_at })
+      .eq('id', w.id)
+      .eq('user_id', user.id)
+  )
+
+  const results = await Promise.all(updates)
+
+  const firstError = results.find(r => r.error)
+  if (firstError) {
+    console.error("Order update error:", firstError.error?.message)
+    throw new Error("Failed to persist new order")
+  }
+
+  revalidatePath('/editor')
+}
+
+export async function updateWidgetContent(id: string, content: Record<string, unknown>) {
+  const supabase = await createClient()
+  
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) throw new Error('Unauthorized')
+
+  const { error } = await supabase
+    .from('widgets')
+    .update({ content })
+    .eq('id', id)
+    .eq('user_id', user.id)
+
+  if (error) {
+    console.error('Update error:', error.message)
+    throw new Error('Failed to update widget')
   }
 
   revalidatePath('/editor')
