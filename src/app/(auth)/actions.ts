@@ -225,3 +225,55 @@ export async function getFavicon(url: string) {
     return null;
   }
 }
+
+export async function updateProfile(formData: { 
+  username: string; 
+  full_name: string; 
+  bio: string; 
+  avatar_url?: string;
+  location?: string;
+  website_url?: string; 
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  if (!user) throw new Error("Not authenticated")
+
+  const { error } = await supabase
+    .from('profiles')
+    .update({
+      username: formData.username,
+      display_name: formData.full_name,
+      bio: formData.bio,
+      avatar_url: formData.avatar_url,
+      location: formData.location,
+      website_url: formData.website_url,
+      updated_at: new Date().toISOString(),
+    })
+    .eq('id', user.id)
+
+  if (error) {
+    console.error("Database Update Error:", error)
+    throw error
+  }
+
+  revalidatePath('/settings')
+  revalidatePath('/editor')
+  revalidatePath('/')
+  
+  return { success: true }
+}
+
+export async function checkUsernameAvailability(username: string) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+
+  const { data } = await supabase
+    .from('profiles')
+    .select('id')
+    .eq('username', username)
+    .single()
+
+  if (!data || data.id === user?.id) return true
+  return false
+}

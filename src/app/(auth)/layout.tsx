@@ -1,13 +1,23 @@
-export default function AuthLayout({ children }: { children: React.ReactNode }) {
+import { createClient } from '@/lib/supabase/server'
+import { redirect } from 'next/navigation'
+import { GlobalNav } from '@/components/navigation/GlobalNav'
+
+export default async function AuthLayout({ children }: { children: React.ReactNode }) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  
+  if (!user) redirect('/login')
+
+  const { data: profile } = await supabase
+    .from('profiles')
+    .select('*')
+    .eq('id', user.id)
+    .single()
+
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-[#fafafa] dark:bg-[#050505] p-4">
-      {/* Brand Logo - Same for both */}
-      <div className="h-12 w-12 bg-black dark:bg-zinc-200 rounded-2xl mb-8 shadow-sm" />
-      
-      {/* The White/Dark Box */}
-      <div className="w-full max-w-100 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 p-8 rounded-3xl shadow-sm">
-        {children}
-      </div>
+    <div className="min-h-screen bg-[#fafafa] dark:bg-[#050505]">
+      <GlobalNav profile={profile} />
+      {children}
     </div>
   )
 }

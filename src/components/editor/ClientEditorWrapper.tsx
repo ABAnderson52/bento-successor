@@ -1,7 +1,7 @@
 'use client'
 
 import dynamic from 'next/dynamic'
-import { Widget } from '@/types'
+import { Widget, Profile, WidgetType } from '@/types'
 
 const EditorController = dynamic(
   () => import('./EditorController').then((mod) => mod.EditorController),
@@ -10,9 +10,16 @@ const EditorController = dynamic(
 
 interface ClientEditorWrapperProps {
   initialWidgets: Widget[]
-  onAdd: (type: any) => Promise<void>
+  profile: Profile
+  onAdd: (type: WidgetType) => Promise<void> // Changed from 'any' to 'WidgetType'
 }
 
-export function ClientEditorWrapper({ initialWidgets, onAdd }: ClientEditorWrapperProps) {
-  return <EditorController initialWidgets={initialWidgets} onAdd={onAdd} />
+export function ClientEditorWrapper({ initialWidgets, profile, onAdd }: ClientEditorWrapperProps) {
+  return (
+    <EditorController 
+      initialWidgets={initialWidgets} 
+      profile={profile} 
+      onAdd={onAdd} 
+    />
+  )
 }
